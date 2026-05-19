@@ -1,0 +1,118 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+MANIFEST
+
+# ─── Virtual environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.conda/
+# Conda env folders if created locally inside the project
+rds-env/
+
+# ─── Environment / secrets ────────────────────────────────────────────────────
+.env
+*.env
+.env.*
+!.env.example
+
+# ─── HuggingFace / Transformers model cache ───────────────────────────────────
+models_cache/
+.cache/
+huggingface/
+# Common HF cache locations that might land inside the project
+*.bin
+*.safetensors
+*.gguf
+*.ggml
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.h5
+# Tokenizer/config files that come with downloaded models
+tokenizer.json
+tokenizer_config.json
+special_tokens_map.json
+vocab.json
+vocab.txt
+merges.txt
+config.json
+generation_config.json
+pytorch_model.bin
+model.safetensors
+flax_model.msgpack
+tf_model.h5
+
+# ─── Scrapling / Playwright browser binaries ──────────────────────────────────
+# Playwright stores browsers here by default on Windows
+%USERPROFILE%/AppData/Local/ms-playwright/
+.playwright/
+playwright-browsers/
+# Scrapling cache/storage
+.scrapling/
+scrapling_storage/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/*.log
+logs/*.log.*
+# Keep the directory itself
+!logs/.gitkeep
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.coveragerc
+.tox/
+
+# ─── IDE & editors ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.spyderproject
+.spyproject
+.ropeproject
+*.code-workspace
+
+# ─── OS generated ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Data / output files ──────────────────────────────────────────────────────
+*.csv
+*.jsonl
+*.parquet
+*.sqlite
+*.db
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+*.bak
+*.swp
+*.swo
+*~
+.mypy_cache/
+.ruff_cache/
+.pyright/
