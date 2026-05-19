@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import urllib.parse
+from datetime import datetime, timezone
 from typing import Iterator
 
 import httpx
 
-from app.models.schemas import RawArticle
+from app.models.schemas import RawResult
 from app.utils.logger import get_logger
 from .base import BaseSource
 
@@ -15,72 +16,55 @@ _SEARCH_URL = (
     "https://www.reddit.com/search.json"
     "?q={query}&sort=relevance&type=link&t=month&limit={limit}"
 )
-_USER_AGENT = "RDS/1.0 (Rumor Detection System; research; non-commercial)"
+_HEADERS = {"User-Agent": "RDS/2.0 (web scraper; non-commercial research)"}
+
+
+def _unix_to_iso(ts: float) -> str:
+    try:
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except Exception:
+        return ""
 
 
 class RedditSource(BaseSource):
-    name = "reddit"
+    name        = "Reddit"
+    source_type = "reddit"
 
-    def search(self, query: str) -> Iterator[RawArticle]:
+    def search(self, query: str) -> Iterator[RawResult]:
         url = _SEARCH_URL.format(
             query=urllib.parse.quote_plus(query),
             limit=min(self.max_results * 2, 25),
         )
-        logger.info("Reddit | searching for: {!r}", query)
 
-        try:
-            with httpx.Client(timeout=15, follow_redirects=True) as client:
-                response = client.get(url, headers={"User-Agent": _USER_AGENT})
-                response.raise_for_status()
-                data = response.json()
-        except Exception as exc:
-            logger.error("Reddit | request failed: {}", exc)
-            return
+        with httpx.Client(timeout=12, headers=_HEADERS, follow_redirects=True) as client:
+            r = client.get(url)
+            r.raise_for_status()
+            posts = r.json().get("data", {}).get("children", [])
 
-        posts = data.get("data", {}).get("children", [])
         count = 0
-
         for post in posts:
             if count >= self.max_results:
                 break
 
-            p = post.get("data", {})
-            title = p.get("title", "").strip()
-            url_post = p.get("url", "").strip()
-            subreddit = p.get("subreddit", "reddit")
-            selftext = p.get("selftext", "")
-            created = p.get("created_utc", "")
-            is_self = p.get("is_self", False)
-            score = p.get("score", 0)
-
-            if not title or not url_post:
+            p     = post.get("data", {})
+            title = (p.get("title") or "").strip()
+            link  = (p.get("url")   or "").strip()
+            if not title or not link:
                 continue
 
-            # Skip low-quality or deleted posts
-            if selftext in ("[removed]", "[deleted]", ""):
-                if is_self:
-                    continue
+            # Skip deleted self-posts — no content to scrape
+            selftext = p.get("selftext", "")
+            if p.get("is_self") and selftext in ("", "[removed]", "[deleted]"):
+                continue
 
-            # Prefer external links over self-posts for article content
-            snippet = selftext[:500] if selftext and selftext not in ("[removed]", "[deleted]") else ""
+            subreddit = p.get("subreddit", "reddit")
+            snippet   = selftext[:400] if selftext not in ("", "[removed]", "[deleted]") else ""
+            published = _unix_to_iso(p.get("created_utc", 0))
 
-            # Convert unix timestamp
-            published_str = ""
-            if created:
-                from datetime import datetime, timezone
-                try:
-                    dt = datetime.fromtimestamp(float(created), tz=timezone.utc)
-                    published_str = dt.strftime("%a, %d %b %Y %H:%M:%S %z")
-                except (ValueError, OSError):
-                    pass
-
-            yield RawArticle(
-                url=url_post,
-                title=title,
-                source=f"Reddit/r/{subreddit}",
-                snippet=snippet,
-                published=published_str,
+            yield RawResult(
+                url=link, title=title,
+                source=f"Reddit / r/{subreddit}", source_type=self.source_type,
+                snippet=snippet, published=published,
+                author=p.get("author", ""),
             )
             count += 1
-
-        logger.info("Reddit | yielded {} posts", count)

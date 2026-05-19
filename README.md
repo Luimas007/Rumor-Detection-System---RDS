@@ -1,34 +1,22 @@
-# RDS — Rumor Detection System · Scraper Module
+# RDS — Web Scraper Module
 
-A Flask-powered web scraping and NLP analysis service that collects articles from multiple news sources, cleans them, and extracts key claims, themes, sentiment, and summaries — designed as a feed module for a larger Rumor Detection System.
+Fast, concurrent web scraper that collects articles from multiple news sources, extracts clean article text, and presents the results through a Flask API and browser UI. Designed as the data-collection layer of a larger Rumor Detection System.
+
+> **No ML models are used.** All processing is pure Python — no GPU, no model downloads, no slow inference.
 
 ---
 
 ## Quick Start
 
-### 1. Create the Conda environment
-
 ```bash
+# 1. Create and activate the conda environment
 conda env create -f environment.yml
 conda activate rds-env
-```
 
-### 2. Install Scrapling browsers (one-time)
-
-```bash
+# 2. Install Scrapling browser binaries (one-time, ~500 MB)
 scrapling install
-```
 
-### 3. Configure environment variables
-
-```bash
-copy .env.example .env
-# Edit .env if needed (optional — defaults work out of the box)
-```
-
-### 4. Run the server
-
-```bash
+# 3. Start the server
 python run.py
 ```
 
@@ -36,140 +24,75 @@ Open **http://localhost:5000** in your browser.
 
 ---
 
-## Usage
+## How It Works — 3-Phase Pipeline
 
-### Web UI
+Every search job runs through three sequential phases, each logged separately so failures are easy to spot:
 
-The frontend has three views accessible from the top navigation bar:
-
-| View | What it does |
-|------|-------------|
-| **Search** | Enter a query, pick sources and article limit, then watch results stream in |
-| **Analyze Text** | Paste any text and run the full NLP pipeline on demand |
-| **History** | Browse and re-open previous search jobs |
-
-#### Search flow
-
-1. Type a topic or claim in the search bar (e.g. `"5G towers cause cancer"`)
-2. Select sources: **Google News**, **Bing News**, **Reddit** (any combination)
-3. Choose a max article count (15 – 60)
-4. Click **Search** — a progress bar shows live status
-5. Results appear as cards showing summary, key claims, themes, and sentiment
-6. Click any card to open the full detail modal with an article excerpt and a link to the original
-
-### REST API
-
-The same functionality is available over HTTP — useful for integrating RDS into a larger pipeline.
-
-#### Start a search job
-
-```http
-POST /api/search
-Content-Type: application/json
-
-{
-  "query": "covid vaccine side effects",
-  "sources": ["google_news", "bing_news", "reddit"],
-  "max_articles": 30
-}
+```
+USER QUERY
+    │
+    ▼
+┌──────────────────────────────────────────────┐
+│  PHASE 1 — SOURCE SEARCH  (parallel)         │
+│                                              │
+│  GoogleNews RSS · BingNews RSS ·             │
+│  Reddit JSON API · HackerNews Algolia API ·  │
+│  DuckDuckGo News                             │
+│                                              │
+│  All sources run concurrently in threads.    │
+│  Results deduplicated by URL before fetch.   │
+└──────────────────┬───────────────────────────┘
+                   │  list[RawResult]  (url + metadata only)
+                   ▼
+┌──────────────────────────────────────────────┐
+│  PHASE 2 — ARTICLE FETCH  (20 workers)       │
+│                                              │
+│  httpx (fast, realistic browser headers)     │
+│    └─ Scrapling Fetcher on 403/429/503       │
+│         └─ trafilatura downloader fallback   │
+│                                              │
+│  trafilatura extracts main article body.     │
+│  Stats tracked live: full / snippet / fail.  │
+└──────────────────┬───────────────────────────┘
+                   │  raw HTML + extracted text
+                   ▼
+┌──────────────────────────────────────────────┐
+│  PHASE 3 — PREPROCESS  (pure Python)         │
+│                                              │
+│  • Strip HTML, fix encoding, remove noise    │
+│  • Language detection (langdetect)           │
+│  • Quality gate: min 50 words                │
+│  • Content-hash deduplication                │
+│  • Sort by publication date                  │
+└──────────────────┬───────────────────────────┘
+                   │
+                   ▼
+          list[Article]  →  JSON API response
 ```
 
-Response `202`:
-```json
-{ "job_id": "d3f1...", "status": "pending" }
-```
+### Why it's fast
 
-#### Poll job status / results
-
-```http
-GET /api/job/{job_id}
-```
-
-Returns the full job object including `articles[]` once `status == "completed"`.
-
-#### Analyze raw text
-
-```http
-POST /api/analyze
-Content-Type: application/json
-
-{ "text": "Scientists confirmed the drug reduces mortality by 40 percent." }
-```
-
-Returns `summary`, `key_claims`, `themes`, `main_theme`, `sentiment`, `sentiment_score`, `reliability_score`.
-
-#### List recent jobs
-
-```http
-GET /api/jobs
-```
-
-#### Health check
-
-```http
-GET /api/health
-```
+| What | How |
+|------|-----|
+| Source search | All 5 sources queried **simultaneously** |
+| Article fetch | **20 concurrent threads** (configurable) |
+| No ML models | Zero model-load time, zero inference latency |
+| Early URL dedup | Skips fetching duplicate URLs from different sources |
+| Short timeout | 12 s/request — bad pages don't stall the queue |
 
 ---
 
-## Pipeline Explanation
+## Sources
 
-```
-User query
-    │
-    ▼
-┌─────────────────────────────────────┐
-│         SOURCE COLLECTION           │
-│  Google News RSS · Bing News RSS    │
-│  Reddit JSON API                    │
-│  (parallel, up to 3 sources)        │
-└──────────────┬──────────────────────┘
-               │  RawArticle objects
-               ▼
-┌─────────────────────────────────────┐
-│         CONTENT FETCHING            │
-│  Scrapling Fetcher (stealth HTTP)   │
-│    └─ fallback: trafilatura fetch   │
-│  trafilatura extracts main text     │
-│  text_cleaner removes noise/HTML    │
-└──────────────┬──────────────────────┘
-               │  clean_content (str)
-               ▼
-┌─────────────────────────────────────┐
-│         NLP PIPELINE                │
-│                                     │
-│  ContentFilter  → quality gate      │
-│  Summarizer     → abstractive sum.  │
-│  ClaimExtractor → key statements    │
-│  TopicDetector  → themes / label    │
-│  SemanticAnalyzer                   │
-│    ├─ SentenceTransformer embedding │
-│    └─ sentiment classification      │
-└──────────────┬──────────────────────┘
-               │  AnalyzedArticle objects
-               ▼
-┌─────────────────────────────────────┐
-│         DEDUPLICATION               │
-│  Cosine similarity on embeddings    │
-│  threshold: 0.88 (configurable)     │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-         JSON response
-       (articles array)
-```
+| Key | Name | Method |
+|-----|------|--------|
+| `google_news` | Google News | RSS search feed |
+| `bing_news` | Bing News | RSS search feed |
+| `reddit` | Reddit | JSON search API |
+| `hackernews` | Hacker News | Algolia search API |
+| `duckduckgo` | DuckDuckGo News | `duckduckgo-search` library |
 
-### NLP models used
-
-| Component | Model | Role |
-|-----------|-------|------|
-| Summarizer | `sshleifer/distilbart-cnn-12-6` | Abstractive summary (≤160 tokens) |
-| Topic detector | `cross-encoder/nli-deberta-v3-small` | Zero-shot multi-label topic classification |
-| Embedder | `sentence-transformers/all-MiniLM-L6-v2` | 384-dim vectors for deduplication |
-| Sentiment | `distilbert-base-uncased-finetuned-sst-2-english` | Positive / Negative / Neutral |
-| NER (claims) | `dslim/bert-base-NER` | Entity recognition used in claim scoring |
-
-All models are **lazy-loaded** on first request and cached for the lifetime of the process. Swap any model by editing `config/config.yaml` — no code changes needed.
+Add a new source by creating `app/scraper/sources/my_source.py` (extend `BaseSource`, implement `search()`), then register it in `app/scraper/sources/__init__.py` → `SOURCE_REGISTRY`.
 
 ---
 
@@ -177,77 +100,138 @@ All models are **lazy-loaded** on first request and cached for the lifetime of t
 
 ```
 RDS/
-├── run.py                      # Entry point
-├── environment.yml             # Conda environment definition
-├── requirements.txt            # Pip requirements (subset of above)
-├── .env.example                # Environment variable template
-│
+├── run.py                          # Entry point
+├── environment.yml                 # Conda environment
+├── requirements.txt
 ├── config/
-│   ├── config.yaml             # Flask, scraper, NLP, and logging settings
-│   └── sources.yaml            # Per-source URLs, limits, and toggles
+│   ├── config.yaml                 # Scraper tuning (concurrency, timeouts, quality gates)
+│   └── sources.yaml                # Per-source enable/disable and limits
 │
 ├── app/
-│   ├── __init__.py             # Flask app factory + CORS
-│   ├── api/routes.py           # All REST endpoints
-│   ├── models/schemas.py       # RawArticle · AnalyzedArticle · SearchJob
+│   ├── __init__.py                 # Flask app factory
+│   ├── api/routes.py               # REST endpoints
+│   ├── models/schemas.py           # RawResult · Article · SearchJob · ScraperStats
 │   │
-│   ├── scraper/
-│   │   ├── engine.py           # Job queue (threading), job store, dedup
-│   │   ├── pipeline.py         # Per-article fetch → extract → clean
+│   ├── scraper/                    # Data collection layer
+│   │   ├── engine.py               # Job management · 3-phase orchestration
+│   │   ├── fetcher.py              # HTTP layer: httpx → Scrapling → trafilatura
+│   │   ├── extractor.py            # trafilatura content extraction wrapper
 │   │   └── sources/
-│   │       ├── base.py         # Abstract BaseSource
-│   │       ├── google_news.py  # Google News RSS
-│   │       ├── bing_news.py    # Bing News RSS
-│   │       └── reddit.py       # Reddit search JSON API
+│   │       ├── base.py             # Abstract BaseSource
+│   │       ├── google_news.py
+│   │       ├── bing_news.py
+│   │       ├── reddit.py
+│   │       ├── hackernews.py
+│   │       └── duckduckgo.py
 │   │
-│   ├── nlp/
-│   │   ├── processor.py        # Singleton NLP orchestrator
-│   │   ├── summarizer.py       # DistilBART summarisation
-│   │   ├── claim_extractor.py  # NER + heuristic claim scoring
-│   │   ├── topic_detector.py   # Zero-shot + keyword fallback
-│   │   ├── semantic_analyzer.py# Embeddings + sentiment
-│   │   └── content_filter.py   # Language detection + quality score
+│   ├── preprocessor/               # Text cleaning layer (no ML)
+│   │   ├── cleaner.py              # HTML strip · encoding fix · noise removal · language detect · date normalise
+│   │   └── deduplicator.py         # URL-level dedup (before fetch) · content-hash dedup (after fetch)
 │   │
 │   └── utils/
-│       ├── logger.py           # Loguru rotating logger
-│       └── text_cleaner.py     # HTML stripping, noise removal, sentence split
+│       ├── logger.py               # Loguru rotating logger
+│       └── text_cleaner.py         # Low-level text utilities
 │
-├── templates/index.html        # Single-page frontend
+├── templates/index.html            # Single-page UI
 ├── static/
-│   ├── css/style.css           # Dark-theme styles
-│   └── js/app.js               # Vanilla JS (search, polling, modal, history)
+│   ├── css/style.css
+│   └── js/app.js                   # Vanilla JS: search · progress phases · stats · modal
 │
 ├── tests/
-│   ├── test_scraper.py         # Scraper + schema unit tests (no network)
-│   └── test_nlp.py             # NLP heuristic tests (no model downloads)
-│
-└── logs/                       # Rotating log files (auto-created)
+│   ├── test_scraper.py
+│   └── test_nlp.py
+└── logs/                           # Rotating log files (auto-created)
 ```
+
+---
+
+## REST API
+
+### Start a scrape job
+```http
+POST /api/search
+Content-Type: application/json
+
+{
+  "query":        "5G towers health risks",
+  "sources":      ["google_news", "bing_news", "reddit", "hackernews", "duckduckgo"],
+  "max_articles": 40
+}
+```
+Response `202`:
+```json
+{ "job_id": "d3f1…", "status": "pending" }
+```
+
+### Poll status + results
+```http
+GET /api/job/{job_id}
+```
+Returns full `articles[]` array only when `status == "completed"`.
+
+### List recent jobs
+```http
+GET /api/jobs
+```
+
+### List available sources
+```http
+GET /api/sources
+```
+
+### Health check
+```http
+GET /api/health
+```
+
+---
+
+## Article Schema
+
+Each completed article exposes:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | str | UUID |
+| `url` | str | Source URL |
+| `title` | str | Article title |
+| `source` | str | Human label (e.g. `"Reddit / r/worldnews"`) |
+| `source_type` | str | Machine key (e.g. `"reddit"`) |
+| `published` | str | ISO-8601 UTC date |
+| `author` | str | Author if available |
+| `content` | str | Full cleaned article body |
+| `snippet` | str | Short RSS/API description (fallback) |
+| `word_count` | int | Words in `content` |
+| `language` | str | ISO 639-1 code detected by langdetect |
+| `fetch_mode` | str | `"full"` / `"snippet_only"` / `"failed"` |
+| `scraped_at` | str | Timestamp of scrape |
 
 ---
 
 ## Configuration
 
-All tunables live in `config/config.yaml`. Key sections:
+**`config/config.yaml`** — all scraper knobs:
 
 ```yaml
 scraper:
-  max_articles_per_source: 15     # articles fetched per source
-  request_timeout: 25             # seconds per HTTP request
-  dedup_similarity_threshold: 0.88 # cosine sim cutoff for dedup
-
-nlp:
-  summarizer_model: sshleifer/distilbart-cnn-12-6
-  max_input_chars: 4000           # chars fed to any model
-  max_claims: 6                   # key claims extracted per article
-  topics:                         # editable topic list for zero-shot
-    - politics
-    - technology
-    - health
-    - ...
+  concurrent_requests: 20    # Phase 2 worker threads
+  request_timeout: 12        # seconds per HTTP request
+  min_content_words: 50      # quality gate
+  language_filter: "en"      # set to "" to accept all languages
 ```
 
-Toggle sources on/off or change their result limits in `config/sources.yaml`.
+**`config/sources.yaml`** — per-source settings:
+
+```yaml
+sources:
+  google_news:
+    enabled: true
+    max_results: 20
+  duckduckgo:
+    enabled: true
+    max_results: 15
+    timelimit: "m"           # d=day w=week m=month y=year
+```
 
 ---
 
@@ -258,41 +242,24 @@ conda activate rds-env
 pytest tests/ -v
 ```
 
-Tests cover text-cleaning utilities, schema serialisation, scraper pipeline helpers, and NLP heuristic paths — all without requiring network access or model downloads.
+All tests are model-free and run without network access.
 
 ---
 
-## Extending the System
+## Debugging Tips
 
-### Add a new scraper source
-
-1. Create `app/scraper/sources/my_source.py` extending `BaseSource`
-2. Implement `search(query) -> Iterator[RawArticle]`
-3. Register it in `app/scraper/engine.py` → `_SOURCE_CLASSES`
-4. Add its config block to `config/sources.yaml`
-
-### Swap an NLP model
-
-Edit the relevant `*_model` key in `config/config.yaml`. The processor reads config at runtime — no restart needed between searches.
-
-### Add a new API endpoint
-
-Add a route function in `app/api/routes.py` on the existing `api_bp` blueprint.
+- Every phase logs at `INFO` level — tail `logs/rds.log` while a job runs to watch the pipeline
+- The stats bar in the UI shows per-phase counts (URLs found → unique → full/snippet/failed → deduped → final)
+- Increase `concurrent_requests` for faster fetching on fast networks; decrease if you're hitting rate limits
+- Set `language_filter: ""` in `config.yaml` to stop dropping non-English articles
+- Set `LOG_LEVEL: DEBUG` to see per-URL fetch method (httpx / scrapling / trafilatura) and extraction results
 
 ---
 
-## Integration with RDS Pipeline
+## Adding a New Source
 
-`AnalyzedArticle` objects expose these fields for downstream RDS modules:
+1. Create `app/scraper/sources/my_source.py` — extend `BaseSource`, implement `search(query) -> Iterator[RawResult]`
+2. Add `"my_source": MySource` to `SOURCE_REGISTRY` in `app/scraper/sources/__init__.py`
+3. Add a config block to `config/sources.yaml`
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `key_claims` | `list[str]` | Extracted factual statements |
-| `themes` | `list[str]` | Detected topic labels |
-| `main_theme` | `str` | Highest-confidence topic |
-| `sentiment` | `str` | `positive` / `negative` / `neutral` |
-| `sentiment_score` | `float` | Model confidence |
-| `reliability_score` | `float` | Heuristic quality score 0–1 |
-| `embedding` | `list[float]` | 384-dim semantic vector |
-
-Use `/api/search` + poll `/api/job/{id}` to get the full articles array as JSON, or import `app.scraper.engine.create_job` directly if embedding RDS as a Python library.
+No other files need to change.

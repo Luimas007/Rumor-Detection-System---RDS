@@ -1,35 +1,22 @@
 sources:
   google_news:
     enabled: true
-    priority: 1
-    max_results: 15
-    url_template: "https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-    type: rss
-    description: "Google News RSS feed"
+    max_results: 20
+    # Search URL is hard-coded in the source class; see app/scraper/sources/google_news.py
 
   bing_news:
     enabled: true
-    priority: 2
-    max_results: 10
-    url_template: "https://www.bing.com/news/search?q={query}&format=RSS"
-    type: rss
-    description: "Bing News RSS feed"
+    max_results: 15
 
   reddit:
     enabled: true
-    priority: 3
-    max_results: 10
-    url_template: "https://www.reddit.com/search.json?q={query}&sort=relevance&type=link&t=month&limit=15"
-    type: json_api
-    description: "Reddit search results"
-    user_agent: "RDS/1.0 (Rumor Detection System; research)"
+    max_results: 15
 
-  # Placeholder for future NewsAPI integration
-  # news_api:
-  #   enabled: false
-  #   priority: 4
-  #   max_results: 20
-  #   endpoint: "https://newsapi.org/v2/everything"
-  #   type: rest_api
-  #   requires_key: true
-  #   key_env: "NEWS_API_KEY"
+  hackernews:
+    enabled: true
+    max_results: 15
+
+  duckduckgo:
+    enabled: true
+    max_results: 15
+    timelimit: "m"    # d=day, w=week, m=month, y=year

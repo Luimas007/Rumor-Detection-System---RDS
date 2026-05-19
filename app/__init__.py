@@ -1,4 +1,4 @@
-"""Flask application factory."""
+"""Flask application factory — scraper-only build."""
 from __future__ import annotations
 
 import yaml
@@ -9,18 +9,14 @@ from app.api.routes import api_bp
 from app.utils.logger import setup_logger
 
 
-def _load_config() -> dict:
+def create_app() -> Flask:
     try:
         with open("config/config.yaml", encoding="utf-8") as fh:
-            return yaml.safe_load(fh)
+            cfg = yaml.safe_load(fh)
     except FileNotFoundError:
-        return {}
+        cfg = {}
 
-
-def create_app() -> Flask:
-    cfg = _load_config()
     log_cfg = cfg.get("logging", {})
-
     setup_logger(
         level=log_cfg.get("level", "DEBUG"),
         log_file=log_cfg.get("log_file", "logs/rds.log"),
@@ -33,7 +29,7 @@ def create_app() -> Flask:
         template_folder="../templates",
         static_folder="../static",
     )
-    app.config["SECRET_KEY"] = "rds-dev-secret-change-me"
+    app.config["SECRET_KEY"]    = "rds-dev-secret-change-me"
     app.config["JSON_SORT_KEYS"] = False
 
     CORS(app, resources={r"/api/*": {"origins": "*"}})

@@ -5,60 +5,20 @@ flask:
   threaded: true
 
 scraper:
-  max_articles_per_source: 15
-  max_total_articles: 40
-  request_timeout: 25
-  retry_attempts: 2
-  retry_delay: 1.5
-  concurrent_requests: 5
-  min_content_length: 200
-  dedup_similarity_threshold: 0.88
+  # ── Concurrency ──────────────────────────────────────────────────────────────
+  concurrent_requests: 20      # worker threads for Phase 2 (article fetch)
+  request_timeout: 12          # seconds per HTTP request (keep low — bad pages stall the queue)
 
-nlp:
-  # Summarization - distilbart is fast; swap for facebook/bart-large-cnn for higher quality
-  summarizer_model: "sshleifer/distilbart-cnn-12-6"
-  summarizer_max_length: 160
-  summarizer_min_length: 50
+  # ── Quality gates ────────────────────────────────────────────────────────────
+  min_content_words: 50        # articles below this are downgraded to snippet_only
+  language_filter: "en"        # ISO 639-1 code; set to "" to accept all languages
 
-  # Sentence embeddings - used for deduplication and semantic search
-  embedder_model: "sentence-transformers/all-MiniLM-L6-v2"
-
-  # Zero-shot topic + claim classification
-  classifier_model: "cross-encoder/nli-deberta-v3-small"
-  classifier_threshold: 0.30
-
-  # Sentiment
-  sentiment_model: "distilbert-base-uncased-finetuned-sst-2-english"
-
-  # Named entity recognition (used in claim extraction)
-  ner_model: "dslim/bert-base-NER"
-
-  # Max text characters fed into any model (prevents OOM on long articles)
-  max_input_chars: 4000
-
-  # Claim extraction
-  max_claims: 6
-  min_claim_length: 30
-
-  # Topics for zero-shot detection
-  topics:
-    - politics
-    - technology
-    - health
-    - science
-    - economy
-    - environment
-    - sports
-    - entertainment
-    - crime
-    - education
-    - military
-    - business
-    - social issues
-    - international
+  # ── Volume ───────────────────────────────────────────────────────────────────
+  # max_articles is set per-request; these are global ceilings
+  max_articles_hard_limit: 100
 
 logging:
-  level: "DEBUG"
+  level: "DEBUG"               # DEBUG | INFO | WARNING | ERROR
+  log_file: "logs/rds.log"
   rotation: "10 MB"
   retention: "7 days"
-  log_file: "logs/rds.log"

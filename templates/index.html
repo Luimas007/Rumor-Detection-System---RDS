@@ -1,171 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RDS — Rumor Detection System</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RDS — Web Scraper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
 </head>
 <body>
 
-<!-- ═══════════════════════════════ HEADER ════════════════════════════════ -->
+<!-- ═══ HEADER ═══════════════════════════════════════════════════════════════ -->
 <header class="site-header">
   <div class="header-inner">
     <div class="logo">
-      <span class="logo-icon">⬡</span>
+      <span class="logo-mark">◈</span>
       <div>
-        <span class="logo-title">RDS</span>
-        <span class="logo-sub">Rumor Detection System</span>
+        <span class="logo-title">RDS Scraper</span>
+        <span class="logo-sub">Rumor Detection System — Data Collection</span>
       </div>
     </div>
     <nav class="header-nav">
-      <a href="#" class="nav-link active" data-view="search">Search</a>
-      <a href="#" class="nav-link" data-view="analyze">Analyze Text</a>
-      <a href="#" class="nav-link" data-view="history">History</a>
+      <button class="nav-btn active" data-view="search">Search</button>
+      <button class="nav-btn" data-view="history">History</button>
     </nav>
   </div>
 </header>
 
-<!-- ════════════════════════════ MAIN CONTENT ════════════════════════════ -->
+<!-- ═══ MAIN ══════════════════════════════════════════════════════════════════ -->
 <main>
 
-  <!-- ── View: Search ── -->
+  <!-- ── SEARCH VIEW ── -->
   <section id="view-search" class="view active">
-    <div class="hero">
-      <h1 class="hero-title">Detect Rumors, Uncover Truth</h1>
-      <p class="hero-sub">Search across multiple news sources, extract key claims, and analyse themes in real time.</p>
 
-      <form id="search-form" class="search-form" autocomplete="off">
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
+    <!-- Hero / search bar -->
+    <div class="hero">
+      <h1 class="hero-title">Search &amp; Scrape</h1>
+      <p class="hero-sub">Collect articles from multiple news sources, clean the content, and review results.</p>
+
+      <form id="search-form" autocomplete="off">
+        <div class="search-row">
           <input type="text" id="search-input" class="search-input"
-                 placeholder="Enter a topic, event, or claim to investigate..."
-                 maxlength="500" required />
-          <button type="submit" class="search-btn" id="search-btn">Search</button>
+                 placeholder="Enter a topic, claim, or keyword…" maxlength="500" required/>
+          <button type="submit" id="search-btn" class="btn-primary">Scrape</button>
         </div>
 
-        <div class="search-options">
-          <div class="option-group">
-            <label class="option-label">Sources</label>
-            <div class="checkboxes">
-              <label class="checkbox-label">
-                <input type="checkbox" name="sources" value="google_news" checked /> Google News
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="sources" value="bing_news" checked /> Bing News
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" name="sources" value="reddit" checked /> Reddit
-              </label>
-            </div>
-          </div>
-          <div class="option-group">
-            <label class="option-label">Max articles</label>
-            <select id="max-articles" class="select-input">
-              <option value="15">15</option>
-              <option value="30" selected>30</option>
-              <option value="45">45</option>
+        <!-- Source checkboxes -->
+        <div class="source-row" id="source-checkboxes">
+          <!-- populated by JS from /api/sources -->
+        </div>
+
+        <div class="options-row">
+          <label class="opt-label">Max articles
+            <select id="max-articles" class="select-sm">
+              <option value="20">20</option>
+              <option value="40" selected>40</option>
               <option value="60">60</option>
+              <option value="100">100</option>
             </select>
-          </div>
+          </label>
         </div>
       </form>
     </div>
 
-    <!-- Progress panel -->
+    <!-- Phase progress -->
     <div id="progress-panel" class="progress-panel hidden">
-      <div class="progress-spinner"></div>
-      <div>
-        <div class="progress-title" id="progress-title">Initialising…</div>
-        <div class="progress-stats" id="progress-stats"></div>
+      <div class="phases">
+        <div class="phase" id="phase-1">
+          <span class="phase-dot"></span>
+          <span class="phase-label">Source Search</span>
+        </div>
+        <div class="phase-arrow">→</div>
+        <div class="phase" id="phase-2">
+          <span class="phase-dot"></span>
+          <span class="phase-label">Article Fetch</span>
+        </div>
+        <div class="phase-arrow">→</div>
+        <div class="phase" id="phase-3">
+          <span class="phase-dot"></span>
+          <span class="phase-label">Preprocess</span>
+        </div>
       </div>
+      <div id="progress-msg" class="progress-msg"></div>
     </div>
 
-    <!-- Results summary bar -->
-    <div id="results-bar" class="results-bar hidden">
-      <div class="results-info">
-        <span id="results-count" class="results-count">0 articles</span>
-        <span class="results-query">for "<span id="results-query-text"></span>"</span>
+    <!-- Stats bar -->
+    <div id="stats-bar" class="stats-bar hidden">
+      <div class="stats-grid" id="stats-grid"></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div id="results-toolbar" class="results-toolbar hidden">
+      <div class="toolbar-left">
+        <span id="result-count" class="result-count"></span>
+        <span id="result-query" class="result-query"></span>
       </div>
-      <div class="results-controls">
-        <label class="filter-label">Filter theme:</label>
-        <select id="theme-filter" class="select-input small">
-          <option value="">All themes</option>
-        </select>
-        <label class="filter-label">Sort:</label>
-        <select id="sort-select" class="select-input small">
-          <option value="date">Newest first</option>
-          <option value="reliability">Reliability</option>
-          <option value="sentiment">Sentiment</option>
-        </select>
+      <div class="toolbar-right">
+        <input type="text" id="filter-input" class="filter-input" placeholder="Filter titles…"/>
+        <label class="opt-label">Source
+          <select id="source-filter" class="select-sm">
+            <option value="">All</option>
+          </select>
+        </label>
+        <label class="opt-label">Mode
+          <select id="mode-filter" class="select-sm">
+            <option value="">All</option>
+            <option value="full">Full article</option>
+            <option value="snippet_only">Snippet only</option>
+          </select>
+        </label>
+        <label class="opt-label">Sort
+          <select id="sort-select" class="select-sm">
+            <option value="date">Newest first</option>
+            <option value="words_desc">Most words</option>
+            <option value="words_asc">Fewest words</option>
+          </select>
+        </label>
       </div>
     </div>
 
     <!-- Article grid -->
     <div id="articles-grid" class="articles-grid"></div>
-
-    <!-- Empty state -->
     <div id="empty-state" class="empty-state hidden">
       <div class="empty-icon">📭</div>
-      <h3>No articles found</h3>
-      <p>Try a different query or enable more sources.</p>
+      <p>No articles matched. Try a different query or enable more sources.</p>
     </div>
+
   </section>
 
-  <!-- ── View: Analyze ── -->
-  <section id="view-analyze" class="view">
-    <div class="page-container">
-      <h2 class="page-title">Analyze Text</h2>
-      <p class="page-desc">Paste any text and run the NLP pipeline to extract claims, themes, and sentiment.</p>
-      <textarea id="analyze-input" class="analyze-textarea"
-                placeholder="Paste article text, a claim, or any content here…" rows="10"></textarea>
-      <button id="analyze-btn" class="primary-btn">Run Analysis</button>
-
-      <div id="analyze-results" class="analyze-results hidden">
-        <div class="analysis-card">
-          <h3>Summary</h3>
-          <p id="a-summary" class="analysis-text"></p>
-        </div>
-        <div class="analysis-card">
-          <h3>Key Claims</h3>
-          <ul id="a-claims" class="claims-list"></ul>
-        </div>
-        <div class="analysis-card">
-          <h3>Themes Detected</h3>
-          <div id="a-themes" class="tags-row"></div>
-        </div>
-        <div class="analysis-card flex-row">
-          <div>
-            <h3>Sentiment</h3>
-            <div id="a-sentiment" class="sentiment-badge"></div>
-          </div>
-          <div>
-            <h3>Reliability Score</h3>
-            <div id="a-reliability" class="score-circle"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── View: History ── -->
+  <!-- ── HISTORY VIEW ── -->
   <section id="view-history" class="view">
-    <div class="page-container">
-      <h2 class="page-title">Search History</h2>
-      <button id="refresh-history-btn" class="secondary-btn">↻ Refresh</button>
+    <div class="page-wrap">
+      <div class="page-header">
+        <h2>Search History</h2>
+        <button id="refresh-history" class="btn-ghost">↻ Refresh</button>
+      </div>
       <div id="history-list" class="history-list"></div>
     </div>
   </section>
 
 </main>
 
-<!-- ═══════════════════════════ ARTICLE MODAL ════════════════════════════ -->
-<div id="article-modal" class="modal-overlay hidden">
+<!-- ═══ ARTICLE MODAL ═══════════════════════════════════════════════════════ -->
+<div id="modal-overlay" class="modal-overlay hidden">
   <div class="modal-box">
-    <button class="modal-close" id="modal-close">✕</button>
-    <div id="modal-content"></div>
+    <button id="modal-close" class="modal-close" aria-label="Close">✕</button>
+    <div id="modal-body"></div>
   </div>
 </div>
 
