@@ -1,23 +1,24 @@
-/* RDS Scraper — Frontend v2 | Vanilla JS */
+/* RDS Scraper -- Frontend v3 | Vanilla JS */
 'use strict';
 
-const API           = '/api';
-const POLL_MS       = 2000;
+const API     = '/api';
+const POLL_MS = 2000;
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// -- State --------------------------------------------------------------------
 let currentJobId = null;
 let pollTimer    = null;
 let allArticles  = [];
 let currentQuery = '';
+let socialTypes  = new Set();   // source_type keys treated as "social discussion"
 
-// ── DOM helpers ────────────────────────────────────────────────────────────────
+// -- DOM helpers --------------------------------------------------------------
 const $  = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
-const show  = el => el?.classList.remove('hidden');
-const hide  = el => el?.classList.add('hidden');
-const esc   = s  => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const show = el => el?.classList.remove('hidden');
+const hide = el => el?.classList.add('hidden');
+const esc  = s  => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-// ── View router ────────────────────────────────────────────────────────────────
+// -- View router --------------------------------------------------------------
 $$('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     $$('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -28,28 +29,48 @@ $$('.nav-btn').forEach(btn => {
   });
 });
 
-// ── Source chips ───────────────────────────────────────────────────────────────
+// -- Source chips -------------------------------------------------------------
+function makeChip(src) {
+  const label = document.createElement('label');
+  label.className = 'source-chip checked';
+  label.innerHTML =
+    '<input type="checkbox" name="sources" value="' + esc(src.key) + '" checked/>' +
+    '<span class="source-chip-dot"></span>' +
+    esc(src.name);
+  label.addEventListener('change', () =>
+    label.classList.toggle('checked', label.querySelector('input').checked)
+  );
+  return label;
+}
+
 async function loadSources() {
   try {
     const sources = await apiFetch(`${API}/sources`);
+
+    // Build the social set so renderArticles can split automatically
+    socialTypes = new Set(sources.filter(s => s.category === 'social').map(s => s.key));
+
     const container = $('#source-checkboxes');
     container.innerHTML = '';
-    sources.forEach(src => {
-      const label = document.createElement('label');
-      label.className = 'source-chip checked';
-      label.innerHTML = `
-        <input type="checkbox" name="sources" value="${esc(src.key)}" checked/>
-        <span class="source-chip-dot"></span>
-        ${esc(src.name)}`;
-      label.addEventListener('change', () => label.classList.toggle('checked', label.querySelector('input').checked));
-      container.appendChild(label);
-    });
+
+    const newsSrc   = sources.filter(s => s.category !== 'social');
+    const socialSrc = sources.filter(s => s.category === 'social');
+
+    newsSrc.forEach(src => container.appendChild(makeChip(src)));
+
+    if (socialSrc.length) {
+      const sep = document.createElement('span');
+      sep.className = 'source-cat-sep';
+      sep.textContent = 'Social';
+      container.appendChild(sep);
+      socialSrc.forEach(src => container.appendChild(makeChip(src)));
+    }
   } catch (e) {
     console.warn('Could not load sources:', e);
   }
 }
 
-// ── Search ─────────────────────────────────────────────────────────────────────
+// -- Search -------------------------------------------------------------------
 $('#search-form').addEventListener('submit', async e => {
   e.preventDefault();
   const query = $('#search-input').value.trim();
@@ -103,14 +124,14 @@ function pollJob() {
 
 function clearPoll() { clearTimeout(pollTimer); pollTimer = null; }
 
-// ── Progress phases ────────────────────────────────────────────────────────────
+// -- Progress phases ----------------------------------------------------------
 function showProgress() {
   show($('#progress-panel'));
   ['phase-1','phase-2','phase-3'].forEach(id => {
     const el = $(`#${id}`);
     el?.classList.remove('active','done');
   });
-  $('#progress-msg').textContent = 'Starting…';
+  $('#progress-msg').textContent = 'Starting...';
 }
 
 function updateProgress(job) {
@@ -154,20 +175,20 @@ function onComplete(job) {
   updateToolbar(allArticles.length, currentQuery);
 }
 
-// ── Stats bar ──────────────────────────────────────────────────────────────────
+// -- Stats bar ----------------------------------------------------------------
 function renderStats(stats) {
   show($('#stats-bar'));
-  const elapsed = stats.elapsed_seconds != null ? `${stats.elapsed_seconds}s` : '—';
+  const elapsed = stats.elapsed_seconds != null ? `${stats.elapsed_seconds}s` : '--';
 
   const items = [
-    { val: stats.total_urls        ?? 0, lbl: 'URLs found',      cls: '' },
-    { val: stats.unique_urls       ?? 0, lbl: 'Unique',          cls: '' },
-    { val: stats.fetched_full      ?? 0, lbl: 'Full articles',   cls: 'green' },
-    { val: stats.fetched_snippet   ?? 0, lbl: 'Snippet only',    cls: 'amber' },
-    { val: stats.fetch_failed      ?? 0, lbl: 'Failed',          cls: 'red' },
+    { val: stats.total_urls         ?? 0, lbl: 'URLs found',     cls: '' },
+    { val: stats.unique_urls        ?? 0, lbl: 'Unique',         cls: '' },
+    { val: stats.fetched_full       ?? 0, lbl: 'Full articles',  cls: 'green' },
+    { val: stats.fetched_snippet    ?? 0, lbl: 'Snippet only',   cls: 'amber' },
+    { val: stats.fetch_failed       ?? 0, lbl: 'Failed',         cls: 'red' },
     { val: stats.duplicates_removed ?? 0, lbl: 'Deduped',        cls: 'purple' },
-    { val: stats.final_count       ?? 0, lbl: 'Final articles',  cls: '' },
-    { val: elapsed,                       lbl: 'Time taken',      cls: '' },
+    { val: stats.final_count        ?? 0, lbl: 'Final articles', cls: '' },
+    { val: elapsed,                        lbl: 'Time taken',     cls: '' },
   ];
 
   $('#stats-grid').innerHTML = items.map(i =>
@@ -177,7 +198,6 @@ function renderStats(stats) {
      </div>`
   ).join('');
 
-  // Per-source breakdown
   const counts = stats.source_counts || {};
   if (Object.keys(counts).length) {
     const src = Object.entries(counts)
@@ -187,10 +207,17 @@ function renderStats(stats) {
   }
 }
 
-// ── Toolbar ────────────────────────────────────────────────────────────────────
+// -- Toolbar ------------------------------------------------------------------
 function updateToolbar(count, query) {
   show($('#results-toolbar'));
-  $('#result-count').textContent = `${count} article${count !== 1 ? 's' : ''}`;
+
+  const newsCount   = allArticles.filter(a => !socialTypes.has(a.source_type)).length;
+  const socialCount = allArticles.filter(a =>  socialTypes.has(a.source_type)).length;
+
+  let label = `${newsCount} article${newsCount !== 1 ? 's' : ''}`;
+  if (socialCount) label += ` + ${socialCount} social discussion${socialCount !== 1 ? 's' : ''}`;
+
+  $('#result-count').textContent = label;
   $('#result-query').textContent = `for "${query}"`;
 }
 
@@ -219,13 +246,16 @@ function applyFilters() {
 
   if (sort === 'words_desc') list.sort((a,b) => (b.word_count||0) - (a.word_count||0));
   else if (sort === 'words_asc') list.sort((a,b) => (a.word_count||0) - (b.word_count||0));
-  // default: date (already sorted server-side)
 
   renderArticles(list);
-  $('#result-count').textContent = `${list.length} article${list.length !== 1 ? 's' : ''}`;
+  const newsN   = list.filter(a => !socialTypes.has(a.source_type)).length;
+  const socialN = list.filter(a =>  socialTypes.has(a.source_type)).length;
+  let label = `${newsN} article${newsN !== 1 ? 's' : ''}`;
+  if (socialN) label += ` + ${socialN} discussion${socialN !== 1 ? 's' : ''}`;
+  $('#result-count').textContent = label;
 }
 
-// ── Render articles ────────────────────────────────────────────────────────────
+// -- Render articles ----------------------------------------------------------
 function renderArticles(articles) {
   const grid = $('#articles-grid');
   grid.innerHTML = '';
@@ -233,10 +263,19 @@ function renderArticles(articles) {
 
   if (!articles.length) { show($('#empty-state')); return; }
 
-  articles.forEach(a => {
-    const card = buildCard(a);
-    grid.appendChild(card);
-  });
+  const newsItems   = articles.filter(a => !socialTypes.has(a.source_type));
+  const socialItems = articles.filter(a =>  socialTypes.has(a.source_type));
+
+  newsItems.forEach(a => grid.appendChild(buildCard(a)));
+
+  if (socialItems.length) {
+    const divider = document.createElement('div');
+    divider.className = 'section-divider';
+    divider.innerHTML =
+      '<span class="section-divider-label">Social Discussions (' + socialItems.length + ')</span>';
+    grid.appendChild(divider);
+    socialItems.forEach(a => grid.appendChild(buildCard(a)));
+  }
 }
 
 function buildCard(a) {
@@ -249,20 +288,23 @@ function buildCard(a) {
   const dateStr     = fmtDate(a.published);
   const source      = shortSource(a.source);
 
-  div.innerHTML = `
-    <div class="card-stripe ${stripeClass}"></div>
-    <div class="card-head">
-      <span class="card-source">${esc(source)}</span>
-      <span class="card-date">${esc(dateStr)}</span>
-    </div>
-    <div class="card-title">${esc(a.title || 'Untitled')}</div>
-    ${preview ? `<div class="card-preview">${esc(preview)}${(a.content || '').length > 280 ? '…' : ''}</div>` : ''}
-    <div class="card-foot">
-      ${modeBadge}
-      ${a.word_count ? `<span class="badge badge-words">${a.word_count} words</span>` : ''}
-      ${a.language && a.language !== 'unknown' ? `<span class="badge badge-lang">${esc(a.language)}</span>` : ''}
-      <span class="card-link">Details →</span>
-    </div>`;
+  div.innerHTML =
+    '<div class="card-stripe ' + stripeClass + '"></div>' +
+    '<div class="card-head">' +
+      '<span class="card-source">' + esc(source) + '</span>' +
+      '<span class="card-date">'   + esc(dateStr) + '</span>' +
+    '</div>' +
+    '<div class="card-title">' + esc(a.title || 'Untitled') + '</div>' +
+    (preview
+      ? '<div class="card-preview">' + esc(preview) + ((a.content || '').length > 280 ? '...' : '') + '</div>'
+      : '') +
+    '<div class="card-foot">' +
+      modeBadge +
+      (a.word_count  ? '<span class="badge badge-words">' + a.word_count + ' words</span>' : '') +
+      (a.language && a.language !== 'unknown'
+        ? '<span class="badge badge-lang">' + esc(a.language) + '</span>' : '') +
+      '<span class="card-link">Details -></span>' +
+    '</div>';
 
   div.addEventListener('click', () => openModal(a));
   return div;
@@ -274,49 +316,47 @@ function modeBadgeHTML(mode) {
   return '<span class="badge badge-failed">Failed</span>';
 }
 
-// ── Modal ──────────────────────────────────────────────────────────────────────
+// -- Modal --------------------------------------------------------------------
 function openModal(a) {
-  const dateStr = fmtDate(a.published);
+  const dateStr    = fmtDate(a.published);
   const hasContent = a.content && a.content.length > 30;
 
-  $('#modal-body').innerHTML = `
-    <div class="modal-source">${esc(a.source)} · ${esc(a.source_type)}</div>
-    <h2 class="modal-title">${esc(a.title || 'Untitled')}</h2>
-    <div class="modal-meta">
-      ${modeBadgeHTML(a.fetch_mode)}
-      ${a.word_count ? `<span class="badge badge-words">${a.word_count} words</span>` : ''}
-      ${a.language && a.language !== 'unknown' ? `<span class="badge badge-lang">${esc(a.language)}</span>` : ''}
-      ${a.author ? `<span class="badge badge-words">by ${esc(a.author)}</span>` : ''}
-      ${dateStr ? `<span class="badge badge-words">${esc(dateStr)}</span>` : ''}
-    </div>
-
-    ${hasContent ? `
-    <div class="modal-section">
-      <div class="modal-section-title">Article Content</div>
-      <div class="modal-content">${esc(a.content)}</div>
-    </div>` : ''}
-
-    ${a.snippet && !hasContent ? `
-    <div class="modal-section">
-      <div class="modal-section-title">Snippet</div>
-      <p class="modal-snippet">${esc(a.snippet)}</p>
-    </div>` : ''}
-
-    <a class="modal-link" href="${esc(a.url)}" target="_blank" rel="noopener">
-      Open original article ↗
-    </a>`;
+  $('#modal-body').innerHTML =
+    '<div class="modal-source">' + esc(a.source) + ' &middot; ' + esc(a.source_type) + '</div>' +
+    '<h2 class="modal-title">' + esc(a.title || 'Untitled') + '</h2>' +
+    '<div class="modal-meta">' +
+      modeBadgeHTML(a.fetch_mode) +
+      (a.word_count ? '<span class="badge badge-words">' + a.word_count + ' words</span>' : '') +
+      (a.language && a.language !== 'unknown'
+        ? '<span class="badge badge-lang">' + esc(a.language) + '</span>' : '') +
+      (a.author  ? '<span class="badge badge-words">by ' + esc(a.author) + '</span>' : '') +
+      (dateStr   ? '<span class="badge badge-words">' + esc(dateStr) + '</span>' : '') +
+    '</div>' +
+    (hasContent
+      ? '<div class="modal-section"><div class="modal-section-title">Article Content</div>' +
+        '<div class="modal-content">' + esc(a.content) + '</div></div>'
+      : '') +
+    (a.snippet && !hasContent
+      ? '<div class="modal-section"><div class="modal-section-title">Snippet</div>' +
+        '<p class="modal-snippet">' + esc(a.snippet) + '</p></div>'
+      : '') +
+    '<a class="modal-link" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+      'Open original article ->' +
+    '</a>';
 
   show($('#modal-overlay'));
 }
 
 $('#modal-close').addEventListener('click', () => hide($('#modal-overlay')));
-$('#modal-overlay').addEventListener('click', e => { if (e.target === $('#modal-overlay')) hide($('#modal-overlay')); });
+$('#modal-overlay').addEventListener('click', e => {
+  if (e.target === $('#modal-overlay')) hide($('#modal-overlay'));
+});
 document.addEventListener('keydown', e => { if (e.key === 'Escape') hide($('#modal-overlay')); });
 
-// ── History ────────────────────────────────────────────────────────────────────
+// -- History ------------------------------------------------------------------
 async function loadHistory() {
   const list = $('#history-list');
-  list.innerHTML = '<p style="color:var(--text2);padding:10px">Loading…</p>';
+  list.innerHTML = '<p style="color:var(--text2);padding:10px">Loading...</p>';
   try {
     const jobs = await apiFetch(`${API}/jobs`);
     if (!jobs.length) {
@@ -328,40 +368,37 @@ async function loadHistory() {
       const card = document.createElement('div');
       card.className = 'history-card';
       const s = job.stats || {};
-      card.innerHTML = `
-        <div>
-          <div class="history-query">${esc(job.query)}</div>
-          <div class="history-meta">
-            ${fmtDate(job.created_at)} · ${s.final_count || 0} articles
-            · ${(job.sources||[]).join(', ')}
-            ${s.elapsed_seconds ? `· ${s.elapsed_seconds}s` : ''}
-          </div>
-        </div>
-        <span class="status-badge status-${job.status}">${job.status}</span>`;
-      if (job.status === 'completed') {
-        card.addEventListener('click', () => reopenJob(job));
-      }
+      card.innerHTML =
+        '<div>' +
+          '<div class="history-query">' + esc(job.query) + '</div>' +
+          '<div class="history-meta">' +
+            fmtDate(job.created_at) + ' &middot; ' + (s.final_count || 0) + ' articles' +
+            ' &middot; ' + (job.sources||[]).join(', ') +
+            (s.elapsed_seconds ? ' &middot; ' + s.elapsed_seconds + 's' : '') +
+          '</div>' +
+        '</div>' +
+        '<span class="status-badge status-' + job.status + '">' + job.status + '</span>';
+      if (job.status === 'completed') card.addEventListener('click', () => reopenJob(job));
       list.appendChild(card);
     });
   } catch (e) {
-    list.innerHTML = `<p style="color:var(--red);padding:10px">Error: ${esc(e.message)}</p>`;
+    list.innerHTML = '<p style="color:var(--red);padding:10px">Error: ' + esc(e.message) + '</p>';
   }
 }
 
 async function reopenJob(job) {
-  // Switch to search view and load the job's articles
   $$('.nav-btn').forEach(b => b.classList.remove('active'));
   $('[data-view="search"]').classList.add('active');
   $$('.view').forEach(v => v.classList.remove('active'));
   $('#view-search').classList.add('active');
 
-  currentQuery  = job.query;
+  currentQuery = job.query;
   $('#search-input').value = job.query;
   resetUI();
 
   try {
     const full = await apiFetch(`${API}/job/${job.id}`);
-    allArticles = full.articles || [];
+    allArticles  = full.articles || [];
     currentQuery = full.query;
     renderStats(full.stats || {});
     populateSourceFilter(allArticles);
@@ -374,7 +411,7 @@ async function reopenJob(job) {
 
 $('#refresh-history').addEventListener('click', loadHistory);
 
-// ── UI helpers ─────────────────────────────────────────────────────────────────
+// -- UI helpers ---------------------------------------------------------------
 function resetUI() {
   hide($('#progress-panel'));
   hide($('#stats-bar'));
@@ -388,10 +425,10 @@ function resetUI() {
 function showError(msg) {
   hide($('#progress-panel'));
   $('#articles-grid').innerHTML =
-    `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--red)">${esc(msg)}</div>`;
+    '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--red)">' + esc(msg) + '</div>';
 }
 
-// ── API helpers ────────────────────────────────────────────────────────────────
+// -- API helpers --------------------------------------------------------------
 async function apiFetch(url) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -408,7 +445,7 @@ async function apiPost(url, body) {
   return data;
 }
 
-// ── Formatting ─────────────────────────────────────────────────────────────────
+// -- Formatting ---------------------------------------------------------------
 function fmtDate(str) {
   if (!str) return '';
   const d = new Date(str);
@@ -419,8 +456,8 @@ function fmtDate(str) {
 function shortSource(src) {
   if (!src) return 'Unknown';
   if (src.length <= 28) return src;
-  return src.slice(0, 26) + '…';
+  return src.slice(0, 26) + '...';
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────────
+// -- Boot ---------------------------------------------------------------------
 loadSources();

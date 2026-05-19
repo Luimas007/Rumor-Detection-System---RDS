@@ -15,6 +15,7 @@ dependencies:
       - trafilatura==2.0.0
       - httpx==0.28.1
       - duckduckgo-search==6.3.7
+      - googlesearch-python==1.2.5
       # Preprocessing (no ML models)
       - langdetect==1.0.9
       - cleantext==1.1.4

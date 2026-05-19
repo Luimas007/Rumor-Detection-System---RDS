@@ -37,7 +37,7 @@ USER QUERY
 │                                              │
 │  GoogleNews RSS · BingNews RSS ·             │
 │  Reddit JSON API · HackerNews Algolia API ·  │
-│  DuckDuckGo News                             │
+│  DuckDuckGo News · News Portals RSS (22)     │
 │                                              │
 │  All sources run concurrently in threads.    │
 │  Results deduplicated by URL before fetch.   │
@@ -74,7 +74,7 @@ USER QUERY
 
 | What | How |
 |------|-----|
-| Source search | All 5 sources queried **simultaneously** |
+| Source search | All 6 sources queried **simultaneously** |
 | Article fetch | **20 concurrent threads** (configurable) |
 | No ML models | Zero model-load time, zero inference latency |
 | Early URL dedup | Skips fetching duplicate URLs from different sources |
@@ -84,13 +84,38 @@ USER QUERY
 
 ## Sources
 
+**News sources** (displayed as articles):
+
 | Key | Name | Method |
 |-----|------|--------|
 | `google_news` | Google News | RSS search feed |
 | `bing_news` | Bing News | RSS search feed |
-| `reddit` | Reddit | JSON search API |
+| `google_web` | Google Web Search | Organic SERP via `googlesearch-python` |
 | `hackernews` | Hacker News | Algolia search API |
 | `duckduckgo` | DuckDuckGo News | `duckduckgo-search` library |
+| `portals` | News Portals (22 feeds) | Concurrent RSS aggregation |
+
+**Social sources** (displayed separately below articles):
+
+| Key | Name | Method |
+|-----|------|--------|
+| `reddit` | Reddit | JSON search API |
+
+Social sources are collected with the same pipeline but rendered in a distinct "Social Discussions" section in the UI, keeping news and community discussion separate. Add `category: social` to any source in `config/sources.yaml` to move it to this section.
+
+### News Portals — included feeds
+
+Articles are keyword-filtered: at least one non-trivial query word must appear in the title or snippet, since portal RSS feeds return their latest articles rather than query-specific results.
+
+| Category | Portals |
+|----------|---------|
+| General / World | BBC News, BBC World, Reuters, AP News, The Guardian, Al Jazeera, NPR, Sky News, CNN, ABC News |
+| Technology | TechCrunch, Ars Technica, The Verge, Wired, Engadget |
+| Science | Science Daily, Phys.org |
+| Business | CNBC, MarketWatch, Forbes |
+| Politics | Politico, The Hill |
+
+To add, remove, or disable individual feeds, edit the `feeds:` list under `portals:` in `config/sources.yaml` — no code changes required.
 
 Add a new source by creating `app/scraper/sources/my_source.py` (extend `BaseSource`, implement `search()`), then register it in `app/scraper/sources/__init__.py` → `SOURCE_REGISTRY`.
 
@@ -122,7 +147,8 @@ RDS/
 │   │       ├── bing_news.py
 │   │       ├── reddit.py
 │   │       ├── hackernews.py
-│   │       └── duckduckgo.py
+│   │       ├── duckduckgo.py
+│   │       └── rss_feed.py         # PortalAggregatorSource — 22 portal feeds
 │   │
 │   ├── preprocessor/               # Text cleaning layer (no ML)
 │   │   ├── cleaner.py              # HTML strip · encoding fix · noise removal · language detect · date normalise
@@ -154,7 +180,7 @@ Content-Type: application/json
 
 {
   "query":        "5G towers health risks",
-  "sources":      ["google_news", "bing_news", "reddit", "hackernews", "duckduckgo"],
+  "sources":      ["google_news", "bing_news", "reddit", "hackernews", "duckduckgo", "portals"],
   "max_articles": 40
 }
 ```
@@ -231,6 +257,17 @@ sources:
     enabled: true
     max_results: 15
     timelimit: "m"           # d=day w=week m=month y=year
+  portals:
+    enabled: true
+    max_results: 100         # total cap across all feeds
+    max_per_feed: 6          # articles fetched per feed before keyword filter
+    max_workers: 15          # concurrent feed fetches
+    feeds:
+      - name: "BBC News"
+        rss_url: "https://feeds.bbci.co.uk/news/rss.xml"
+        category: general
+        enabled: true
+      # … 21 more feeds — see config/sources.yaml for full list
 ```
 
 ---

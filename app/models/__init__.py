@@ -1,6 +1,6 @@
-from .schemas import RawArticle, AnalyzedArticle, SearchJob, JobStats, JobStatus, Sentiment
+from .schemas import RawResult, Article, SearchJob, ScraperStats, JobStatus, FetchMode
 
 __all__ = [
-    "RawArticle", "AnalyzedArticle", "SearchJob",
-    "JobStats", "JobStatus", "Sentiment",
+    "RawResult", "Article", "SearchJob",
+    "ScraperStats", "JobStatus", "FetchMode",
 ]

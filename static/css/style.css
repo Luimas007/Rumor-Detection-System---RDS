@@ -93,9 +93,19 @@ a:hover { text-decoration: underline; }
 .btn-primary:hover    { opacity: .85; }
 .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
 
+/* Source chip category separator */
+.source-cat-sep {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--text3); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .08em; padding: 0 4px;
+}
+.source-cat-sep::before {
+  content: ''; width: 1px; height: 16px; background: var(--border2);
+}
+
 /* Source checkboxes */
 .source-row {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 12px;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-bottom: 12px;
 }
 .source-chip {
   display: flex; align-items: center; gap: 5px;
@@ -200,6 +210,8 @@ a:hover { text-decoration: underline; }
 .stripe-reddit        { background: #ff4500; }
 .stripe-hackernews    { background: #ff6600; }
 .stripe-duckduckgo    { background: #de5833; }
+.stripe-portals       { background: #0ea5e9; }
+.stripe-google_web    { background: #34a853; }
 .stripe-default       { background: var(--accent); }
 
 .card-head {
@@ -240,6 +252,23 @@ a:hover { text-decoration: underline; }
 .badge-words   { background: var(--bg3); border-color: var(--border); color: var(--text2); }
 .badge-lang    { background: var(--bg3); border-color: var(--border); color: var(--text2); }
 .card-link     { margin-left: auto; font-size: 10px; color: var(--accent); }
+
+/* ═══ SECTION DIVIDER (News / Social split inside the grid) ══════════════════ */
+.section-divider {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 16px;
+  padding: 28px 0 4px;
+}
+.section-divider::before,
+.section-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.section-divider-label {
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .1em; white-space: nowrap;
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--bg2);
+}
 
 /* ═══ EMPTY STATE ════════════════════════════════════════════════════════════ */
 .empty-state { text-align: center; padding: 80px 20px; color: var(--text2); }

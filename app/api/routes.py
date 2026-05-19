@@ -88,10 +88,22 @@ def jobs_list():
 
 @api_bp.get("/sources")
 def sources_list():
-    """Return all registered source keys and their human names."""
+    """Return all registered source keys, names, and categories."""
+    import yaml
+    try:
+        with open("config/sources.yaml", encoding="utf-8") as fh:
+            src_cfg = yaml.safe_load(fh).get("sources", {})
+    except Exception:
+        src_cfg = {}
+
     from app.scraper.sources import SOURCE_REGISTRY as reg
     return jsonify([
-        {"key": k, "name": cls.name, "type": cls.source_type}
+        {
+            "key":      k,
+            "name":     cls.name,
+            "type":     cls.source_type,
+            "category": src_cfg.get(k, {}).get("category", "news"),
+        }
         for k, cls in reg.items()
     ])
 

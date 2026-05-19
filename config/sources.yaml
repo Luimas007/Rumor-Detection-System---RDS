@@ -1,22 +1,159 @@
 sources:
   google_news:
+    category: news
     enabled: true
     max_results: 20
     # Search URL is hard-coded in the source class; see app/scraper/sources/google_news.py
 
   bing_news:
+    category: news
     enabled: true
     max_results: 15
 
   reddit:
+    category: social   # displayed separately as Social Discussions
     enabled: true
     max_results: 15
 
   hackernews:
+    category: news
     enabled: true
     max_results: 15
 
   duckduckgo:
+    category: news
     enabled: true
     max_results: 15
     timelimit: "m"    # d=day, w=week, m=month, y=year
+
+  google_web:
+    category: news
+    enabled: true
+    max_results: 15
+    sleep_interval: 1.0   # seconds between results -- increase if Google blocks you
+    timeout: 10
+    lang: "en"
+    # Note: Google may rate-limit this source. If results stop appearing,
+    # set enabled: false and rely on google_news + portals instead.
+
+  portals:
+    category: news
+    enabled: true
+    max_results: 100   # total cap across all feeds
+    max_per_feed: 6    # articles per individual feed before keyword filter
+    max_workers: 15    # concurrent feed fetches
+    feeds:
+      # ── General / World News ─────────────────────────────────────────────────
+      - name: "BBC News"
+        rss_url: "https://feeds.bbci.co.uk/news/rss.xml"
+        category: general
+        enabled: true
+
+      - name: "BBC World"
+        rss_url: "https://feeds.bbci.co.uk/news/world/rss.xml"
+        category: general
+        enabled: true
+
+      - name: "Reuters"
+        rss_url: "https://feeds.reuters.com/reuters/topNews"
+        category: general
+        enabled: true
+
+      - name: "AP News"
+        rss_url: "https://apnews.com/index.rss"
+        category: general
+        enabled: true
+
+      - name: "The Guardian"
+        rss_url: "https://www.theguardian.com/world/rss"
+        category: general
+        enabled: true
+
+      - name: "Al Jazeera"
+        rss_url: "https://www.aljazeera.com/xml/rss/all.xml"
+        category: general
+        enabled: true
+
+      - name: "NPR News"
+        rss_url: "https://feeds.npr.org/1001/rss.xml"
+        category: general
+        enabled: true
+
+      - name: "Sky News"
+        rss_url: "https://feeds.skynews.com/feeds/rss/world.xml"
+        category: general
+        enabled: true
+
+      - name: "CNN"
+        rss_url: "http://rss.cnn.com/rss/edition.rss"
+        category: general
+        enabled: true
+
+      - name: "ABC News"
+        rss_url: "https://abcnews.go.com/abcnews/topstories"
+        category: general
+        enabled: true
+
+      # ── Technology ───────────────────────────────────────────────────────────
+      - name: "TechCrunch"
+        rss_url: "https://techcrunch.com/feed/"
+        category: technology
+        enabled: true
+
+      - name: "Ars Technica"
+        rss_url: "https://feeds.arstechnica.com/arstechnica/index"
+        category: technology
+        enabled: true
+
+      - name: "The Verge"
+        rss_url: "https://www.theverge.com/rss/index.xml"
+        category: technology
+        enabled: true
+
+      - name: "Wired"
+        rss_url: "https://www.wired.com/feed/rss"
+        category: technology
+        enabled: true
+
+      - name: "Engadget"
+        rss_url: "https://www.engadget.com/rss.xml"
+        category: technology
+        enabled: true
+
+      # ── Science ──────────────────────────────────────────────────────────────
+      - name: "Science Daily"
+        rss_url: "https://www.sciencedaily.com/rss/all.xml"
+        category: science
+        enabled: true
+
+      - name: "Phys.org"
+        rss_url: "https://phys.org/rss-feed/"
+        category: science
+        enabled: true
+
+      # ── Business / Finance ───────────────────────────────────────────────────
+      - name: "CNBC"
+        rss_url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"
+        category: business
+        enabled: true
+
+      - name: "MarketWatch"
+        rss_url: "https://feeds.marketwatch.com/marketwatch/topstories/"
+        category: business
+        enabled: true
+
+      - name: "Forbes"
+        rss_url: "https://www.forbes.com/innovation/feed/"
+        category: business
+        enabled: true
+
+      # ── Politics ─────────────────────────────────────────────────────────────
+      - name: "Politico"
+        rss_url: "https://www.politico.com/rss/politicopicks.xml"
+        category: politics
+        enabled: true
+
+      - name: "The Hill"
+        rss_url: "https://thehill.com/rss/syndicator/19110"
+        category: politics
+        enabled: true
