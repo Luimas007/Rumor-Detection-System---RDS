@@ -2,48 +2,47 @@ sources:
   google_news:
     category: news
     enabled: true
-    max_results: 20
-    # Search URL is hard-coded in the source class; see app/scraper/sources/google_news.py
+    max_results: 30
 
   bing_news:
     category: news
     enabled: true
-    max_results: 15
+    max_results: 30
 
   reddit:
     category: social   # displayed separately as Social Discussions
     enabled: true
-    max_results: 15
+    max_results: 25
 
   hackernews:
     category: news
     enabled: true
-    max_results: 15
+    max_results: 25
 
   duckduckgo:
     category: news
     enabled: true
-    max_results: 15
+    max_results: 30
     timelimit: "m"    # d=day, w=week, m=month, y=year
 
   google_web:
     category: news
     enabled: true
-    max_results: 15
+    max_results: 20
     sleep_interval: 1.0   # seconds between results -- increase if Google blocks you
     timeout: 10
     lang: "en"
-    # Note: Google may rate-limit this source. If results stop appearing,
+    # Note: Google may rate-limit this source. If you get blocked,
     # set enabled: false and rely on google_news + portals instead.
 
   portals:
     category: news
     enabled: true
-    max_results: 100   # total cap across all feeds
-    max_per_feed: 6    # articles per individual feed before keyword filter
-    max_workers: 15    # concurrent feed fetches
+    max_results: 250     # total cap across all feeds
+    max_per_feed: 25     # articles fetched per feed BEFORE keyword filter (was 6 -- too low)
+    max_workers: 20      # concurrent feed fetches
     feeds:
-      # ── General / World News ─────────────────────────────────────────────────
+      # ── General / World News ──────────────────────────────────────────────────
       - name: "BBC News"
         rss_url: "https://feeds.bbci.co.uk/news/rss.xml"
         category: general
@@ -57,6 +56,11 @@ sources:
       - name: "Reuters"
         rss_url: "https://feeds.reuters.com/reuters/topNews"
         category: general
+        enabled: true
+
+      - name: "Reuters Business"
+        rss_url: "https://feeds.reuters.com/reuters/businessNews"
+        category: business
         enabled: true
 
       - name: "AP News"
@@ -94,7 +98,38 @@ sources:
         category: general
         enabled: true
 
-      # ── Technology ───────────────────────────────────────────────────────────
+      - name: "Time Magazine"
+        rss_url: "https://time.com/feed/"
+        category: general
+        enabled: true
+
+      - name: "Newsweek"
+        rss_url: "https://www.newsweek.com/rss"
+        category: general
+        enabled: true
+
+      - name: "The Independent"
+        rss_url: "https://www.independent.co.uk/rss"
+        category: general
+        enabled: true
+
+      - name: "USA Today"
+        rss_url: "https://www.usatoday.com/rss/news/"
+        category: general
+        enabled: true
+
+      # ── International ─────────────────────────────────────────────────────────
+      - name: "France 24"
+        rss_url: "https://www.france24.com/en/rss"
+        category: general
+        enabled: true
+
+      - name: "Deutsche Welle"
+        rss_url: "https://rss.dw.com/xml/rss-en-all"
+        category: general
+        enabled: true
+
+      # ── Technology ────────────────────────────────────────────────────────────
       - name: "TechCrunch"
         rss_url: "https://techcrunch.com/feed/"
         category: technology
@@ -120,7 +155,27 @@ sources:
         category: technology
         enabled: true
 
-      # ── Science ──────────────────────────────────────────────────────────────
+      - name: "VentureBeat"
+        rss_url: "https://venturebeat.com/feed/"
+        category: technology
+        enabled: true
+
+      - name: "MIT Tech Review"
+        rss_url: "https://www.technologyreview.com/feed/"
+        category: technology
+        enabled: true
+
+      - name: "ZDNet"
+        rss_url: "https://www.zdnet.com/news/rss.xml"
+        category: technology
+        enabled: true
+
+      - name: "Slashdot"
+        rss_url: "http://rss.slashdot.org/Slashdot/slashdotMain"
+        category: technology
+        enabled: true
+
+      # ── Science ───────────────────────────────────────────────────────────────
       - name: "Science Daily"
         rss_url: "https://www.sciencedaily.com/rss/all.xml"
         category: science
@@ -131,7 +186,17 @@ sources:
         category: science
         enabled: true
 
-      # ── Business / Finance ───────────────────────────────────────────────────
+      - name: "Nature"
+        rss_url: "https://www.nature.com/nature.rss"
+        category: science
+        enabled: true
+
+      - name: "Medical Xpress"
+        rss_url: "https://medicalxpress.com/rss-feed/"
+        category: science
+        enabled: true
+
+      # ── Business / Finance ────────────────────────────────────────────────────
       - name: "CNBC"
         rss_url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"
         category: business
@@ -147,7 +212,12 @@ sources:
         category: business
         enabled: true
 
-      # ── Politics ─────────────────────────────────────────────────────────────
+      - name: "The Economist"
+        rss_url: "https://www.economist.com/latest/rss.xml"
+        category: business
+        enabled: true
+
+      # ── Politics ──────────────────────────────────────────────────────────────
       - name: "Politico"
         rss_url: "https://www.politico.com/rss/politicopicks.xml"
         category: politics

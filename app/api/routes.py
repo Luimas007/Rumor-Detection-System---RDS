@@ -50,9 +50,9 @@ def search():
         return jsonify({"error": f"No valid sources. Valid: {sorted(_VALID_SOURCES)}"}), 400
 
     try:
-        max_articles = max(5, min(int(body.get("max_articles", 30)), 100))
+        max_articles = max(5, min(int(body.get("max_articles", 60)), 200))
     except (TypeError, ValueError):
-        max_articles = 30
+        max_articles = 60
 
     job = create_job(query=query, sources=sources, max_articles=max_articles)
     logger.info("POST /search — job={} query={!r}", job.id[:8], query)

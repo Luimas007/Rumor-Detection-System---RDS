@@ -74,8 +74,8 @@ USER QUERY
 
 | What | How |
 |------|-----|
-| Source search | All 6 sources queried **simultaneously** |
-| Article fetch | **20 concurrent threads** (configurable) |
+| Source search | All 7 sources queried **simultaneously** |
+| Article fetch | **30 concurrent threads** (configurable) |
 | No ML models | Zero model-load time, zero inference latency |
 | Early URL dedup | Skips fetching duplicate URLs from different sources |
 | Short timeout | 12 s/request — bad pages don't stall the queue |
@@ -109,10 +109,11 @@ Articles are keyword-filtered: at least one non-trivial query word must appear i
 
 | Category | Portals |
 |----------|---------|
-| General / World | BBC News, BBC World, Reuters, AP News, The Guardian, Al Jazeera, NPR, Sky News, CNN, ABC News |
-| Technology | TechCrunch, Ars Technica, The Verge, Wired, Engadget |
-| Science | Science Daily, Phys.org |
-| Business | CNBC, MarketWatch, Forbes |
+| General / World | BBC News, BBC World, Reuters, AP News, The Guardian, Al Jazeera, NPR, Sky News, CNN, ABC News, Time, Newsweek, The Independent, USA Today |
+| International | France 24, Deutsche Welle |
+| Technology | TechCrunch, Ars Technica, The Verge, Wired, Engadget, VentureBeat, MIT Tech Review, ZDNet, Slashdot |
+| Science | Science Daily, Phys.org, Nature, Medical Xpress |
+| Business | CNBC, MarketWatch, Forbes, Reuters Business, The Economist |
 | Politics | Politico, The Hill |
 
 To add, remove, or disable individual feeds, edit the `feeds:` list under `portals:` in `config/sources.yaml` — no code changes required.

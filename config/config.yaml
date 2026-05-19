@@ -5,20 +5,19 @@ flask:
   threaded: true
 
 scraper:
-  # ── Concurrency ──────────────────────────────────────────────────────────────
-  concurrent_requests: 20      # worker threads for Phase 2 (article fetch)
-  request_timeout: 12          # seconds per HTTP request (keep low — bad pages stall the queue)
+  # -- Concurrency --------------------------------------------------------------
+  concurrent_requests: 30      # worker threads for Phase 2 (article fetch)
+  request_timeout: 12          # seconds per HTTP request
 
-  # ── Quality gates ────────────────────────────────────────────────────────────
+  # -- Quality gates ------------------------------------------------------------
   min_content_words: 50        # articles below this are downgraded to snippet_only
   language_filter: "en"        # ISO 639-1 code; set to "" to accept all languages
 
-  # ── Volume ───────────────────────────────────────────────────────────────────
-  # max_articles is set per-request; these are global ceilings
-  max_articles_hard_limit: 100
+  # -- Volume -------------------------------------------------------------------
+  max_articles_hard_limit: 200
 
 logging:
-  level: "DEBUG"               # DEBUG | INFO | WARNING | ERROR
+  level: "DEBUG"
   log_file: "logs/rds.log"
   rotation: "10 MB"
   retention: "7 days"

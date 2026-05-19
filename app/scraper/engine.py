@@ -260,8 +260,9 @@ def _run_job(job_id: str) -> None:
                 job.stats.elapsed_seconds = round(time.time() - t0, 2)
             return
 
-        # Cap at 2× max so Phase 3 dedup has room to trim
-        budget = min(len(raw_results), job.max_articles * 2)
+        # Fetch up to 3× the requested max so Phase 3 dedup/quality filtering
+        # has enough candidates. Hard ceiling of 400 to prevent runaway fetches.
+        budget = min(len(raw_results), max(job.max_articles * 3, 120), 400)
         raw_results = raw_results[:budget]
         _update(f"Phase 2/3 — Fetching {len(raw_results)} articles…")
 
@@ -308,7 +309,7 @@ def _run_job(job_id: str) -> None:
 # ── Public API ─────────────────────────────────────────────────────────────────
 
 def create_job(query: str, sources: Optional[list[str]] = None,
-               max_articles: int = 30) -> SearchJob:
+               max_articles: int = 60) -> SearchJob:
     all_sources = list(SOURCE_REGISTRY.keys())
     job = SearchJob(
         query=query,
