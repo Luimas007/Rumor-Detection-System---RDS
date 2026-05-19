@@ -1,0 +1,64 @@
+flask:
+  host: "0.0.0.0"
+  port: 5000
+  debug: true
+  threaded: true
+
+scraper:
+  max_articles_per_source: 15
+  max_total_articles: 40
+  request_timeout: 25
+  retry_attempts: 2
+  retry_delay: 1.5
+  concurrent_requests: 5
+  min_content_length: 200
+  dedup_similarity_threshold: 0.88
+
+nlp:
+  # Summarization - distilbart is fast; swap for facebook/bart-large-cnn for higher quality
+  summarizer_model: "sshleifer/distilbart-cnn-12-6"
+  summarizer_max_length: 160
+  summarizer_min_length: 50
+
+  # Sentence embeddings - used for deduplication and semantic search
+  embedder_model: "sentence-transformers/all-MiniLM-L6-v2"
+
+  # Zero-shot topic + claim classification
+  classifier_model: "cross-encoder/nli-deberta-v3-small"
+  classifier_threshold: 0.30
+
+  # Sentiment
+  sentiment_model: "distilbert-base-uncased-finetuned-sst-2-english"
+
+  # Named entity recognition (used in claim extraction)
+  ner_model: "dslim/bert-base-NER"
+
+  # Max text characters fed into any model (prevents OOM on long articles)
+  max_input_chars: 4000
+
+  # Claim extraction
+  max_claims: 6
+  min_claim_length: 30
+
+  # Topics for zero-shot detection
+  topics:
+    - politics
+    - technology
+    - health
+    - science
+    - economy
+    - environment
+    - sports
+    - entertainment
+    - crime
+    - education
+    - military
+    - business
+    - social issues
+    - international
+
+logging:
+  level: "DEBUG"
+  rotation: "10 MB"
+  retention: "7 days"
+  log_file: "logs/rds.log"

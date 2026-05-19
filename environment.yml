@@ -1,0 +1,36 @@
+name: rds-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      # Web framework
+      - flask==3.1.0
+      - flask-cors==5.0.0
+      # Scraping
+      - scrapling[fetchers]==0.3.6
+      - feedparser==6.0.11
+      - trafilatura==2.0.0
+      # NLP / ML
+      - transformers==4.47.0
+      - torch==2.5.1
+      - sentence-transformers==3.3.1
+      - bertopic==0.16.4
+      # Data processing
+      - nltk==3.9.1
+      - langdetect==1.0.9
+      - cleantext==1.1.4
+      # Utilities
+      - pyyaml==6.0.2
+      - python-dotenv==1.0.1
+      - httpx==0.28.1
+      - aiohttp==3.11.10
+      - loguru==0.7.3
+      - uuid==1.30
+      - numpy==2.2.0
+      - scikit-learn==1.5.2
+      # Dev tools
+      - pytest==8.3.4
+      - black==24.10.0
